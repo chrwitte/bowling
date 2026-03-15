@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg">
+  <title>Bowling Scoreboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       #1565C0;
+      --primary-mid:   #1976D2;
+      --bg:            #F5F5F5;
+      --surface:       #FFFFFF;
+      --text:          #212121;
+      --text-muted:    #757575;
+      --border:        #E0E0E0;
+      --error:         #C62828;
+      --yellow-bg:     #FFFDE7;
+      --blue-bg:       #E3F2FD;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      gap: 4px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .nav-btn {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .nav-btn:active { background: rgba(255,255,255,0.3); }
+    .week-info { flex: 1; text-align: center; }
+    .week-info .week-num  { font-size: 18px; font-weight: 700; }
+    .week-info .week-date { font-size: 12px; opacity: 0.8; }
+
+    /* ── Team button ── */
+    .team-bar { padding: 8px 12px 0; }
+    .team-btn {
+      width: 100%;
+      background: var(--primary-mid);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+    }
+    .team-btn:active { opacity: 0.85; }
+
+    /* ── Info box ── */
+    .info-box {
+      background: var(--yellow-bg);
+      border-left: 4px solid #F9A825;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 14px;
+      margin: 12px 12px 4px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: 10px;
+      margin: 10px 12px;
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Players chip ── */
+    .players-chip {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 6px 12px 2px;
+    }
+
+    /* ── Score table ── */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    th { font-size: 12px; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; font-weight: 600; font-size: 14px; padding-left: 2px; }
+    .score-input {
+      width: 58px;
+      height: 44px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 16px;
+      color: var(--text);
+      background: var(--bg);
+      -moz-appearance: textfield;
+    }
+    .score-input::-webkit-inner-spin-button,
+    .score-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .score-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(21,101,192,0.15);
+    }
+
+    /* ── Add game button ── */
+    .add-game-btn {
+      display: block;
+      width: 100%;
+      padding: 11px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      background: none;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .add-game-btn:active { background: var(--bg); }
+
+    /* ── Summary ── */
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+    .summary-row:last-of-type { border-bottom: none; }
+    .summary-total { font-weight: 700; color: var(--primary); font-size: 17px; }
+    .best4-badge {
+      background: var(--blue-bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--primary);
+      line-height: 1.5;
+    }
+    .best4-badge strong { font-size: 18px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 18px 18px 0 0;
+      width: 100%;
+      max-width: 600px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 16px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .close-btn {
+      background: var(--bg);
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+    .modal-body   { padding: 16px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      color: var(--text);
+      background: white;
+    }
+    .form-input:focus { outline: none; border-color: var(--primary); }
+
+    .player-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .player-row .form-input { flex: 1; }
+    .remove-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 8px;
+      background: #FFEBEE;
+      color: var(--error);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .remove-btn:active { opacity: 0.7; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .checkbox-row:last-child { border-bottom: none; }
+    .checkbox-row input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--primary);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .checkbox-row span { font-size: 16px; }
+
+    .btn {
+      flex: 1;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary  { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--bg); color: var(--text); }
+    .btn:active { opacity: 0.8; }
+
+    .error-msg {
+      color: var(--error);
+      font-size: 13px;
+      padding: 6px 0 0;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ── Bottom padding so content isn't hidden under iOS home bar ── */
+    .bottom-pad { height: 24px; }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+'use strict';
+
+// ─── Storage ─────────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = 'bowling_scores_v2';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* ignore */ }
+  return { team: { name: '', players: [] }, current_week: 1, weeks: {} };
+}
+
+function save() {
+  state.current_week = currentWeek;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
+let state = loadData();
+let currentWeek = state.current_week || 1;
+
+// Seed first week on fresh install
+if (Object.keys(state.weeks).length === 0) {
+  ensureWeek(currentWeek);
+  save();
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function ensureWeek(n) {
+  if (!state.weeks[n]) {
+    state.weeks[n] = { date: new Date().toISOString(), selected_players: [], games: [] };
+  }
+}
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function calculateBest4(games) {
+  const totals = games.map(g => g.scores.reduce((s, v) => s + (v ?? 0), 0));
+  let bestSum = -Infinity, bestStart = 0;
+  for (let i = 0; i <= totals.length - 4; i++) {
+    const s = totals[i] + totals[i+1] + totals[i+2] + totals[i+3];
+    if (s > bestSum) { bestSum = s; bestStart = i; }
+  }
+  return { sum: bestSum, label: `Spiele ${bestStart+1}–${bestStart+4}` };
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+
+function render() {
+  const team = state.team;
+  const week = state.weeks[currentWeek];
+  const dateStr = week?.date ? week.date.slice(0, 10) : `Woche ${currentWeek}`;
+  const teamName = team.name || 'Team einrichten ›';
+
+  let html = `
+    <div class="header">
+      <button class="nav-btn" onclick="prevWeek()" aria-label="Vorherige Woche">&#8249;</button>
+      <div class="week-info">
+        <div class="week-num">Woche ${currentWeek}</div>
+        <div class="week-date">${esc(dateStr)}</div>
+      </div>
+      <button class="nav-btn" onclick="nextWeek()" aria-label="Nächste Woche">&#8250;</button>
+    </div>
+
+    <div class="team-bar">
+      <button class="team-btn" onclick="openPlayerSelector()">${esc(teamName)}</button>
+    </div>
+  `;
+
+  if (!week) {
+    html += `<div class="info-box">Woche ${currentWeek} hat noch keine Daten.</div>`;
+    document.getElementById('app').innerHTML = html + '<div class="bottom-pad"></div>';
+    return;
+  }
+
+  if (!team.name || team.players.length < 2) {
+    html += `<div class="info-box">
+      1. Tippe auf den Team-Button → dann auf <strong>✎ Bearbeiten</strong>, um Spielernamen einzugeben.<br>
+      2. Anschließend 2 Spielerinnen für diese Woche auswählen.
+    </div>`;
+    document.getElementById('app').innerHTML = html + '<div class="bottom-pad"></div>';
+    return;
+  }
+
+  if (!week.selected_players?.length) {
+    html += `<div class="info-box">
+      Tippe auf <strong>${esc(team.name)}</strong> um die 2 Spielerinnen für diese Woche zu wählen.
+    </div>`;
+    document.getElementById('app').innerHTML = html + '<div class="bottom-pad"></div>';
+    return;
+  }
+
+  html += `<div class="players-chip">Diese Woche: ${esc(week.selected_players.join(', '))}</div>`;
+
+  // Score table
+  const games = week.games || [];
+  html += `<div class="card"><div class="card-title">Spiele (${games.length} / 6)</div>`;
+
+  if (games.length > 0) {
+    html += `<div class="table-wrap"><table><thead><tr><th>Spielerin</th>`;
+    games.forEach(g => { html += `<th>Spiel&nbsp;${g.num}</th>`; });
+    html += `</tr></thead><tbody>`;
+
+    week.selected_players.forEach((player, pIdx) => {
+      html += `<tr><td>${esc(player)}</td>`;
+      games.forEach((g, gIdx) => {
+        const val = g.scores[pIdx] != null ? g.scores[pIdx] : '';
+        html += `<td><input class="score-input" type="number" inputmode="numeric"
+          min="0" max="300" value="${esc(val)}"
+          data-p="${pIdx}" data-g="${gIdx}"
+          onchange="updateScore(${pIdx},${gIdx},this.value)"></td>`;
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  if (games.length < 6) {
+    html += `<button class="add-game-btn" onclick="addGame()">+ Spiel ${games.length + 1} hinzufügen</button>`;
+  }
+  html += `</div>`;
+
+  // Summary
+  if (games.length > 0) {
+    html += `<div class="card"><div class="card-title">Auswertung</div>`;
+    week.selected_players.forEach((player, pIdx) => {
+      const total = games.reduce((s, g) => s + (g.scores[pIdx] ?? 0), 0);
+      html += `<div class="summary-row"><span>${esc(player)}</span><span class="summary-total">${total}</span></div>`;
+    });
+
+    if (games.length >= 4) {
+      const b4 = calculateBest4(games);
+      html += `<div class="best4-badge">
+        🏆 Beste 4 aufeinanderfolgende (${esc(b4.label)}): <strong>${b4.sum}</strong> Punkte
+      </div>`;
+    } else {
+      html += `<div class="best4-badge">Noch ${4 - games.length} Spiel(e) bis zur Wertung.</div>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `<div class="bottom-pad"></div>`;
+  document.getElementById('app').innerHTML = html;
+}
+
+// ─── Score update (no full re-render while typing) ────────────────────────────
+
+function updateScore(pIdx, gIdx, value) {
+  const parsed = value === '' ? null : parseInt(value, 10);
+  state.weeks[currentWeek].games[gIdx].scores[pIdx] = isNaN(parsed) ? null : Math.max(0, Math.min(300, parsed));
+  save();
+  render();
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+
+function prevWeek() {
+  if (currentWeek <= 1) return;
+  currentWeek--;
+  save();
+  render();
+}
+
+function nextWeek() {
+  const cur = state.weeks[currentWeek];
+  const hasData = cur?.games?.length > 0;
+  currentWeek++;
+
+  if (!state.weeks[currentWeek]) {
+    ensureWeek(currentWeek);
+    if (hasData) {
+      // Pre-fill 4 empty games and copy players from previous week
+      state.weeks[currentWeek].games = Array.from({ length: 4 }, (_, i) => ({ num: i+1, scores: [null, null] }));
+      const prevPlayers = cur?.selected_players ?? [];
+      if (prevPlayers.length) {
+        state.weeks[currentWeek].selected_players = [...prevPlayers];
+      }
+    }
+  }
+  save();
+  render();
+}
+
+function addGame() {
+  ensureWeek(currentWeek);
+  const games = state.weeks[currentWeek].games;
+  games.push({ num: games.length + 1, scores: [null, null] });
+  save();
+  render();
+}
+
+// ─── Modal helpers ────────────────────────────────────────────────────────────
+
+function openModal(title, bodyHtml, footerHtml) {
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <span>${title}</span>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">
+      <div class="error-msg" id="modal-error"></div>
+      ${footerHtml}
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function showError(msg) {
+  const el = document.getElementById('modal-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target.id === 'modal-overlay') closeModal();
+});
+
+// ─── Player Selector ──────────────────────────────────────────────────────────
+
+function openPlayerSelector() {
+  const { team } = state;
+  if (!team.name || team.players.length < 2) {
+    openTeamEditor();
+    return;
+  }
+
+  const current = state.weeks[currentWeek]?.selected_players ?? [];
+  const rows = team.players.map(p => `
+    <label class="checkbox-row">
+      <input type="checkbox" name="psel" value="${esc(p)}" ${current.includes(p) ? 'checked' : ''}>
+      <span>${esc(p)}</span>
+    </label>
+  `).join('');
+
+  openModal('Spielerinnen auswählen', `
+    <p style="margin-bottom:12px;color:var(--text-muted);font-size:14px">Bitte genau 2 auswählen:</p>
+    ${rows}
+  `, `
+    <button class="btn btn-secondary" onclick="openTeamEditor()">✎ Bearbeiten</button>
+    <button class="btn btn-primary" onclick="savePlayerSelection()">OK</button>
+  `);
+}
+
+function savePlayerSelection() {
+  const checked = [...document.querySelectorAll('input[name="psel"]:checked')].map(cb => cb.value);
+  if (checked.length !== 2) { showError('Bitte genau 2 Spielerinnen auswählen!'); return; }
+
+  ensureWeek(currentWeek);
+  const week = state.weeks[currentWeek];
+  week.selected_players = checked;
+  if (!week.games.length) {
+    week.games = Array.from({ length: 4 }, (_, i) => ({ num: i+1, scores: [null, null] }));
+  }
+  save();
+  closeModal();
+  render();
+}
+
+// ─── Team Editor ─────────────────────────────────────────────────────────────
+// Uses a local mutable array so we can add/remove rows without full re-render.
+
+let _editPlayers = [];
+
+function openTeamEditor() {
+  _editPlayers = [...state.team.players];
+  if (_editPlayers.length < 2) _editPlayers = ['', ''];
+  renderTeamEditorModal();
+}
+
+function renderTeamEditorModal() {
+  const rowsHtml = _editPlayers.map((p, i) => `
+    <div class="player-row" id="erow-${i}">
+      <input class="form-input" id="ep-${i}" type="text" value="${esc(p)}"
+        placeholder="Spielerin ${i+1}" oninput="_editPlayers[${i}]=this.value">
+      <button class="remove-btn" onclick="removeEditPlayer(${i})" title="Entfernen">−</button>
+    </div>
+  `).join('');
+
+  openModal('Team bearbeiten', `
+    <div class="form-group">
+      <label class="form-label">Team Name</label>
+      <input class="form-input" id="ename" type="text"
+        value="${esc(state.team.name)}" placeholder="z.B. Bowling Stars">
+    </div>
+    <div class="form-label" style="margin-bottom:8px">Spielerinnen (2–8)</div>
+    <div id="erows">${rowsHtml}</div>
+    ${_editPlayers.length < 8
+      ? `<button class="add-game-btn" onclick="addEditPlayer()" style="margin-top:4px">+ Spielerin hinzufügen</button>`
+      : ''}
+  `, `
+    <button class="btn btn-secondary" onclick="openPlayerSelector()">Zurück</button>
+    <button class="btn btn-primary" onclick="saveTeam()">Speichern</button>
+  `);
+}
+
+function addEditPlayer() {
+  _editPlayers.push('');
+  renderTeamEditorModal();
+  // Focus the new input
+  const inputs = document.querySelectorAll('#erows .form-input');
+  inputs[inputs.length - 1]?.focus();
+}
+
+function removeEditPlayer(idx) {
+  if (_editPlayers.length <= 2) { showError('Mindestens 2 Spielerinnen erforderlich.'); return; }
+  _editPlayers.splice(idx, 1);
+  renderTeamEditorModal();
+}
+
+function saveTeam() {
+  // Collect current input values (oninput keeps _editPlayers in sync, but let's also read DOM)
+  const inputs = document.querySelectorAll('#erows .form-input');
+  _editPlayers = [...inputs].map(i => i.value.trim());
+  const players = _editPlayers.filter(Boolean);
+
+  const name = document.getElementById('ename')?.value.trim();
+  if (!name) { showError('Bitte einen Teamnamen eingeben.'); return; }
+  if (players.length < 2) { showError('Mindestens 2 Spielerinnen erforderlich.'); return; }
+  if (players.length > 8) { showError('Maximal 8 Spielerinnen erlaubt.'); return; }
+
+  state.team.name = name;
+  state.team.players = players;
+  save();
+  closeModal();
+  render();
+}
+
+// ─── Service Worker ───────────────────────────────────────────────────────────
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+
+render();
+
+if (!state.team.name) {
+  // Small delay so the main UI is visible behind the modal
+  setTimeout(openTeamEditor, 150);
+}
+</script>
+</body>
+</html>
