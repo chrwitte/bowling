@@ -190,6 +190,8 @@
       line-height: 1.5;
     }
     .best4-badge strong { font-size: 18px; }
+    .best4-player { font-size: 13px; margin-top: 4px; padding-left: 4px; }
+    .sum-row td { border-top: 2px solid var(--border); background: var(--blue-bg); font-size: 14px; }
 
     /* ── Modal ── */
     .modal-overlay {
@@ -392,7 +394,11 @@ function calculateBest4(games) {
     const s = totals[i] + totals[i+1] + totals[i+2] + totals[i+3];
     if (s > bestSum) { bestSum = s; bestStart = i; }
   }
-  return { sum: bestSum, label: `Spiele ${bestStart+1}–${bestStart+4}` };
+  const numPlayers = games[0]?.scores?.length ?? 0;
+  const playerTotals = Array.from({ length: numPlayers }, (_, pIdx) =>
+    [0,1,2,3].reduce((s, offset) => s + (games[bestStart + offset]?.scores[pIdx] ?? 0), 0)
+  );
+  return { sum: bestSum, label: `Spiele ${bestStart+1}–${bestStart+4}`, playerTotals };
 }
 
 // ─── Render ──────────────────────────────────────────────────────────────────
@@ -463,6 +469,13 @@ function render() {
       });
       html += `</tr>`;
     });
+    // Summenzeile pro Spiel
+    html += `<tr class="sum-row"><td><strong>Summe</strong></td>`;
+    games.forEach(g => {
+      const gameTotal = g.scores.reduce((s, v) => s + (v ?? 0), 0);
+      html += `<td><strong>${gameTotal}</strong></td>`;
+    });
+    html += `</tr>`;
     html += `</tbody></table></div>`;
   }
 
@@ -481,8 +494,12 @@ function render() {
 
     if (games.length >= 4) {
       const b4 = calculateBest4(games);
+      const playerLines = week.selected_players
+        .map((p, i) => `<div class="best4-player">${esc(p)}: <strong>${b4.playerTotals[i]}</strong></div>`)
+        .join('');
       html += `<div class="best4-badge">
         🏆 Beste 4 aufeinanderfolgende (${esc(b4.label)}): <strong>${b4.sum}</strong> Punkte
+        ${playerLines}
       </div>`;
     } else {
       html += `<div class="best4-badge">Noch ${4 - games.length} Spiel(e) bis zur Wertung.</div>`;
